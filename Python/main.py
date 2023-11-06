@@ -3,7 +3,6 @@ import pyodbc
 import uvicorn
 from datetime import date, datetime
 from pydantic import BaseModel, Field
-import pandas as pd
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 #-------------------------------------------------INITIALIZATION--------------------------------------------#
