@@ -1,6 +1,6 @@
 CREATE TABLE Customer (
     username varchar(255) Primary Key,
-    password varchar(255),
+    pasword varchar(255),
     fname varchar(255) not null,
     lname varchar(255) not null,
     dateOfBirth date not null,
@@ -28,9 +28,9 @@ CREATE TABLE Booking (
     bookingId int Primary Key,
     username varchar(255) not null,
     masuerID int not null,
-    dateTime smalldatetime not null,
-    Timeofmasuer smalldatetime not null,
-    Timeofcheckout smalldatetime not null,
+    datTime smalldatetime not null,
+    Timemasuer smalldatetime not null,
+    Timeofout smalldatetime not null,
     prices float not null,
     Foreign Key (username) References Customer(username),
     Foreign Key (masuerID) References Masuer(masuerId)
@@ -41,9 +41,7 @@ CREATE TABLE CustomerReview (
     username varchar(255) not null,
     bookingId int not null,
     reviewText varchar(255) not null,
-    dateTime smalldatetime,
+    dateTim smalldatetime,
     Foreign Key (username) References Customer(username),
     Foreign Key (bookingId) References Booking(bookingId)
 );
-
-
