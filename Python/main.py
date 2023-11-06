@@ -1,3 +1,5 @@
+import subprocess
+
 from fastapi import FastAPI, HTTPException
 import pyodbc
 import uvicorn
@@ -19,7 +21,7 @@ app = FastAPI()
 
 origins = [
     "http://localhost",  # Add your frontend's domain here
-    "http://localhost:8000",  # Add more origins if needed
+    "http://localhost:3000",  # Add more origins if needed
 ]
 
 app.add_middleware(
@@ -142,15 +144,7 @@ class MasuerCredentials(BaseModel):
     masuerName : str
 
 def verify_masuer(Id: str, masuerName: str) -> bool:
-    """
-    function use for check username and password in database 
 
-    Args :
-        Id : str,
-        masuerName : str
-
-    Returns : Boolean if true login sucsesfull
-    """
     try:
 
         query = "select count(*) from Masuer where masuerId = ? and fname = ?"
@@ -236,26 +230,29 @@ class selectDay(BaseModel):
 
 @app.post("/main/massuertype/selectnexttime")
 async def select_next_time(select_day: selectDay):
-    input_date_str = select_day.dateTimes
-    massuertype = select_day.massuertype
+    try:
+        input_date_str = select_day.dateTimes
+        massuertype = select_day.massuertype
 
-    # Parse the date with the correct format (e.g., "2023-12-15")
-    input_date = datetime.strptime(input_date_str, "%Y-%m-%d")
+        # Parse the date with the correct format (e.g., "2023-12-15")
+        input_date = datetime.strptime(input_date_str, "%Y-%m-%d")
 
-    day_of_week = input_date.strftime("%A")
-    query = """
-            select M.masuerId, M.fname, M.lname
-            from Masuer M
-            where M.dayoff <> ? and M.massuertype = ? and M.statusNow = 1
-            """
+        day_of_week = input_date.strftime("%A")
+        query = """
+                select M.masuerId, M.fname, M.lname
+                from Masuer M
+                where M.dayoff <> ? and M.massuertype = ? and M.statusNow = 1
+                """
 
-    # Assuming you have a cursor and database connection set up
-    cursor.execute(query, (day_of_week, massuertype))
-    result = cursor.fetchall()
-    dict_list = [{'ID': item[0], 'First Name': item[1], 'Last Name': item[2]} for item in result]
-    
-    # Return the result as JSON
-    return dict_list
+        # Assuming you have a cursor and database connection set up
+        cursor.execute(query, (day_of_week, massuertype))
+        result = cursor.fetchall()
+        dict_list = [{'ID': item[0], 'First Name': item[1], 'Last Name': item[2]} for item in result]
+
+        # Return the result as JSON
+        return dict_list
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 #-------------------------------------------- Buy, Booking -----------------------------------------#
 from datetime import timedelta
@@ -276,12 +273,14 @@ async def book_appointment(booking_info: init_buy):
     timebookwill = datetime.strptime(booking_info.time_bookingwant, "%Y-%m-%d %H-%M-%S")
     execute_cursor = cursor.execute("select * from Booking").fetchall()
     bookingId = len(execute_cursor) + 1
-
     points = timewant
+
     if timewant < 30:
         return{"message": "Only bookings of more than 30 minutes are allowed."}
     current_time = datetime.now()
-    
+    # print(username, masuerId, timewant)
+    # print(timebookwill)
+    # print(current_time)
     if timebookwill <= current_time:
         return {"message": "Booking time must be after the current time."}
 
@@ -290,7 +289,6 @@ async def book_appointment(booking_info: init_buy):
     try:
         current_time_str = current_time.strftime('%Y-%m-%d %H:%M:%S')
 
-        # Check if there are any existing bookings with the same masuerId and overlapping time periods
         conflict_query = """
                         select count(*) from Booking
                         where masuerID = ? and
@@ -301,13 +299,12 @@ async def book_appointment(booking_info: init_buy):
         if conflict_count > 0:
             return {"message": "Booking conflicts with an existing appointment for the same masuerId."}
 
-        # Fetch the current points from the Customer table
         points_query = "select points from Customer where username = ?"
         current_points = cursor.execute(points_query, username).fetchone()[0]
         
-        # Calculate new points
+
         new_points = current_points + points
-        # Update the points in the Customer table
+
         update_point = """
                 update Customer
                 set points = ?
@@ -315,7 +312,7 @@ async def book_appointment(booking_info: init_buy):
                 """
         cursor.execute(update_point, (new_points, username))
         
-        # Insert the booking into the database
+
         query = """
                 insert into Booking (bookingId, username, masuerID, datTime, Timemasuer, Timeofout, prices)
                 values (?, ?, ?, ?, ?, ?, ?)
@@ -336,25 +333,26 @@ class MassuerScheduiling(BaseModel):
 
 @app.post("/main/massuerscheduling")
 def selectMasuerScheduling(massuer: MassuerScheduiling):
-    masuerId = massuer.masuerId
+    try:
+        masuerId = massuer.masuerId
 
-    current_time = datetime.now()
+        current_time = datetime.now()
 
-    query = """
-            select M.fname, M.lname, C.fname, B.Timemasuer
-            from Customer C, Masuer M, Booking B
-            where (B.username = C.username) and (M.masuerId = B.masuerID) and (B.masuerID = ?) and (B.Timemasuer >= ?)
-            """
-    cursor.execute(query, (masuerId, current_time))
-    result = cursor.fetchall()
-    dict_list = [{'Masuer firstname': item[0], 'Masuer lastname': item[1], 'Customer name': item[2], 'start Time': item[3].isoformat()} for item in result]
+        query = """
+                select M.fname, M.lname, C.fname, B.Timemasuer
+                from Customer C, Masuer M, Booking B
+                where (B.username = C.username) and (M.masuerId = B.masuerID) and (B.masuerID = ?) and (B.Timemasuer >= ?)
+                """
+        cursor.execute(query, (masuerId, current_time))
+        result = cursor.fetchall()
+        dict_list = [{'Masuer firstname': item[0], 'Masuer lastname': item[1], 'Customer name': item[2], 'start Time': item[3].isoformat()} for item in result]
 
-    # Sort the results by 'start Time'
-    sorted_dict_list = sorted(dict_list, key=lambda item: item['start Time'])
+        # Sort the results by 'start Time'
+        sorted_dict_list = sorted(dict_list, key=lambda item: item['start Time'])
 
-    return JSONResponse(content=sorted_dict_list)
-
-
+        return JSONResponse(content=sorted_dict_list)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
     
 #------------------------------------------------- Massuer Salary ---------------------------------------------#
@@ -440,17 +438,20 @@ class viewStory(BaseModel):
     username : str
 
 @app.post('/viewhistory')
-def getHistory(historys : viewStory):
-    username = historys.username
-    qeury = """
-            select C.fname, M.fname, M.massuerType, B.Timemasuer 
-            from Booking B, Masuer M, Customer C
-            where (B.username = ?) and (B.username = C.username) and (B.masuerID = M.masuerId) 
-            """
-    cursor.execute(qeury, username)
-    results = cursor.fetchall()
-    dict_list = [{'Name ': item[0],'Masuer Name': str(item[1]), 'Type':item[2], 'Time': str(item[3])} for item in results]
-    return JSONResponse(content=dict_list)
+def getHistory(historys: viewStory):
+    try:
+        username = historys.username
+        query = """
+                select C.fname, M.fname, M.massuerType, B.Timemasuer 
+                from Booking B, Masuer M, Customer C
+                where (B.username = ?) and (B.username = C.username) and (B.masuerID = M.masuerId) 
+                """
+        cursor.execute(query, (username,))
+        results = cursor.fetchall()
+        dict_list = [{'Name': item[0], 'Masuer Name': item[1], 'Type': item[2], 'Time': item[3].isoformat()} for item in results]
+        return JSONResponse(content=dict_list)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #------------------------------------------------- Massuer Income -------------------------------------------
 def getMassuerIncome():
@@ -485,22 +486,24 @@ class Bonus(BaseModel):
     masuerId : int
 
 @app.post('/masuerbonus')
-def bonusCalculator(Bonus : Bonus):
-    masuerId = Bonus.masuerId
-    qeury = """
-            SELECT M.fname, SUM(B.prices) * 0.15 AS BonusPrices
-            FROM Booking B
-            INNER JOIN Masuer M ON B.masuerID = M.masuerId
-            WHERE B.masuerID = ?
-                AND CONVERT(DATE, B.Timeofout) >= DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0) -- 1st day of the current month
-                AND CONVERT(DATE, B.Timeofout) <= CAST(GETDATE() AS DATE) -- Current date
-            GROUP BY M.fname;
-
-            """
-    cursor.execute(qeury, masuerId)
-    results = cursor.fetchall()
-    dict_list = [{'Name ': item[0],'Salary': 15500, 'Bomus':item[1]} for item in results]
-    return JSONResponse(content=dict_list)
+def bonusCalculator(Bonus: Bonus):
+    try:
+        masuerId = Bonus.masuerId
+        query = """
+                SELECT M.fname, SUM(B.prices) * 0.15 AS BonusPrices
+                FROM Booking B
+                INNER JOIN Masuer M ON B.masuerID = M.masuerId
+                WHERE B.masuerID = ?
+                    AND CONVERT(DATE, B.Timeofout) >= DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()), 0) -- 1st day of the current month
+                    AND CONVERT(DATE, B.Timeofout) <= CAST(GETDATE() AS DATE) -- Current date
+                GROUP BY M.fname;
+                """
+        cursor.execute(query, (masuerId,))
+        results = cursor.fetchall()
+        dict_list = [{'Name': item[0], 'Salary': 15500, 'Bonus': item[1]} for item in results]
+        return JSONResponse(content=dict_list)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/allmasuerbonus')
 def getAllMasuerBonus():
