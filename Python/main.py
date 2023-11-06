@@ -525,6 +525,62 @@ def getAllMasuerBonus():
     
     except Exception as e:
         return str(e)
+#------------------------------------------------- GET TABLE -------------------------------------------------------#
+@app.get('/getMasuer')
+def getMasuer():
+    try: 
+        query = """
+                select M.masuerId, M.fname, M.lname, M.massuertype from Masuer M
+                """
+        cursor.execute(query)
+        results = cursor.fetchall()
+
+        dict_list = [{'ID': item[0], 'name': item[1] + ' ' + item[2], 'Type': item[3]} for item in results]
+        return JSONResponse(dict_list)
+    except Exception as e:
+        return str(e)
+
+@app.get('/getCustomer')
+def getCustomer():
+    try:
+        query = """
+                select C.username, C.pasword, C.fname, C.lname from Customer C
+                """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        dict_list = [{'Username': item[0], 'Password': item[1], 'Name': item[2] + ' ' + item[3]} for item in results]
+        return JSONResponse(dict_list)
+    except Exception as e:
+        return str(e)
+    
+@app.get('/getBooking')
+def getBook():
+    try:
+        query = """
+                select B.bookingId, B.username, B.masuerID, B.prices from Booking B
+                """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        dict_list = [{'Booking ID': item[0], 'Username': item[1], 'Masuer ID': item[2], 'Prices': item[3]} for item in results]
+        return JSONResponse(dict_list)
+    except Exception as e:
+        return str(e)
+
+@app.get('/getCustomerReview')
+def getCusReview():
+    try:
+        query = """
+                select R.reviewId, R.username, R.bookingId, R.reviewText from CustomerReview R
+                """
+        cursor.execute(query)
+        results = cursor.fetchall()
+        dict_list = [{'Review ID': item[0], 'Username': item[1], 'Booking ID': item[2], 'Text':item[3]} for item in results]
+        return JSONResponse(dict_list)
+    except Exception as e:
+        return str(e)
+    
+    
 #------------------------------------------------- RUN -------------------------------------------------------#
+
 if __name__ == "__main__":
     uvicorn.run(app, host="localhost", port=8000)
