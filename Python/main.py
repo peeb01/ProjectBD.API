@@ -11,8 +11,8 @@ from fastapi.responses import JSONResponse
 
 
 DRIVER_NAME = 'ODBC Driver 17 for SQL Server'
-SERVER_NAME = 'DESKTOP-M9VL3MH\SQLEXPRESS'
-DATABASE_NAME = 'PP'
+SERVER_NAME = '***************************'
+DATABASE_NAME = '******'
 connection_string = f"DRIVER={{{DRIVER_NAME}}};SERVER={SERVER_NAME};DATABASE={DATABASE_NAME};Trusted_Connection=yes;"
 
 conn = pyodbc.connect(connection_string)
@@ -20,16 +20,16 @@ cursor = conn.cursor()
 app = FastAPI()
 
 origins = [
-    "http://localhost",  # Add your frontend's domain here
-    "http://localhost:3000",  # Add more origins if needed
+    "http://localhost", 
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow any origin for testing (restrict this in production)
+    allow_origins=["*"], 
     allow_credentials=True,
-    allow_methods=["*"],  # Allow any HTTP method for testing (restrict this in production)
-    allow_headers=["*"],  # Allow any headers for testing (restrict this in production)
+    allow_methods=["*"], 
+    allow_headers=["*"],  
 )
 
 #-------------------------------------------------Masuer register -----------------------------------------#
